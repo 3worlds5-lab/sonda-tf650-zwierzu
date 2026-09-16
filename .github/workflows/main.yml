@@ -22,21 +22,28 @@ jobs:
           channel: stable
           flutter-version: 3.29.0
 
-      - name: Utworz platformy bez nadpisywania kodu
+      - name: Przygotuj projekt Flutter
         run: |
-          if [ ! -d android ]; then
-            # Tworzymy tymczasowy projekt, aby wyciągnąć z niego tylko folder android/
-            flutter create --platforms=android --project-name tf650_app temp_app
-            cp -r temp_app/android ./android
-            rm -rf temp_app
+          # 1. Zabezpiecz Twój kod źródłowy
+          mkdir -p /tmp/my_code
+          cp -r lib /tmp/my_code/ || true
+
+          # 2. Wygeneruj strukturę projektu w bieżącym katalogu
+          flutter create --platforms=android --project-name tf650_app --force .
+
+          # 3. Przywróć Twój oryginalny kod do lib/
+          if [ -d /tmp/my_code/lib ]; then
+            cp -r /tmp/my_code/lib/* lib/
           fi
 
-      - run: flutter pub get
+      - name: Pobierz zależności
+        run: flutter pub get
 
       - name: Build APK
-        run: flutter build apk --release --split-per-abi
+        run: flutter build apk --release
 
-      - uses: actions/upload-artifact@v4
+      - name: Udostępnij APK
+        uses: actions/upload-artifact@v4
         with:
           name: tf650-apk
-          path: build/app/outputs/flutter-apk/*.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
