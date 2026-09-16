@@ -1,0 +1,83 @@
+# Ten plik buduje gotowy plik .apk (Android) w chmurze GitHuba.
+# Nie potrzebujesz Android Studio ani niczego instalowac na komputerze.
+#
+# JAK UZYC:
+#  1. Zaloz darmowe konto na github.com
+#  2. Utworz nowe repozytorium (moze byc prywatne)
+#  3. Wgraj do niego cala zawartosc paczki tf650_app (przycisk "Add file" -> "Upload files")
+#     - wazne: plik ktory czytasz musi wyladowac w sciezce .github/workflows/build.yml
+#  4. Zakladka "Actions" -> "Build TF650 App" -> "Run workflow"
+#  5. Po ok. 5-8 minutach na dole strony pojawi sie "Artifacts" -> tf650-apk
+#  6. Pobierz zip, wyciagnij plik .apk, przeslij na telefon i zainstaluj
+#     (Android zapyta o zgode na "instalacje z nieznanych zrodel" - to normalne)
+
+name: Build TF650 App
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.29.0
+
+      # Jesli w repo nie ma folderow android/ i ios/, tworzymy je automatycznie.
+      - name: Utworz platformy jesli brakuje
+        run: |
+          if [ ! -d android ]; then
+            flutter create --platforms=android,ios --project-name tf650_app .
+          fi
+
+      - run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release --split-per-abi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tf650-apk
+          path: build/app/outputs/flutter-apk/*.apk
+
+  ios:
+    name: iOS (bez podpisu)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.29.0
+
+      - name: Utworz platformy jesli brakuje
+        run: |
+          if [ ! -d ios ]; then
+            flutter create --platforms=android,ios --project-name tf650_app .
+          fi
+
+      - run: flutter pub get
+
+      # Build bez podpisu - powstaje Runner.app.
+      # Zeby zainstalowac to na iPhonie, i tak potrzebujesz wlasnego Apple ID
+      # i podpisania (Xcode na Macu albo platny serwis typu Codemagic).
+      - name: Build iOS
+        run: flutter build ios --release --no-codesign
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tf650-ios-unsigned
+          path: build/ios/iphoneos/Runner.app
