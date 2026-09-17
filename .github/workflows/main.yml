@@ -24,15 +24,17 @@ jobs:
 
       - name: Przygotuj projekt Flutter
         run: |
-          # 1. Zabezpiecz Twój kod źródłowy
+          # 1. Zabezpiecz kod źródłowy jeśli istnieje folder lib
           mkdir -p /tmp/my_code
-          cp -r lib /tmp/my_code/ || true
+          if [ -d "lib" ]; then
+            cp -r lib /tmp/my_code/
+          fi
 
-          # 2. Wygeneruj strukturę projektu w bieżącym katalogu
-          flutter create --platforms=android --project-name tf650_app --force .
+          # 2. Wygeneruj strukturę projektu (z nadpisywaniem --overwrite)
+          flutter create --overwrite --platforms=android --project-name tf650_app .
 
-          # 3. Przywróć Twój oryginalny kod do lib/
-          if [ -d /tmp/my_code/lib ]; then
+          # 3. Przywróć oryginalny kod do lib/ jeśli został kopią zabezpieczającą
+          if [ -d "/tmp/my_code/lib" ]; then
             cp -r /tmp/my_code/lib/* lib/
           fi
 
